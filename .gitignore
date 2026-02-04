@@ -1,0 +1,7 @@
+# Root-level safety net (client/ and server/ have their own .gitignore)
+.env
+.env.*
+!.env.example
+*.pem
+.DS_Store
+Thumbs.db

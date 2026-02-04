@@ -1,0 +1,1 @@
+"""Katalog API application."""

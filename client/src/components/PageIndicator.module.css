@@ -1,0 +1,110 @@
+.indicator {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 98;
+  transform: translateY(-20px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.indicator.visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--color-bg-secondary) 70%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.container:hover {
+  background: color-mix(in srgb, var(--color-pink-50) 80%, transparent);
+  border-color: var(--color-pink-200);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.image {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  line-height: var(--line-height-snug);
+}
+
+.subtitle {
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  line-height: var(--line-height-snug);
+}
+
+.icon {
+  color: var(--color-pink-400);
+  flex-shrink: 0;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .indicator {
+    top: 70px;
+    right: 12px;
+  }
+  
+  .container {
+    padding: 6px 12px;
+    gap: 8px;
+    height: 38px;
+    min-height: 38px;
+    box-sizing: border-box;
+  }
+  
+  .image {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .title {
+    font-size: 0.75rem;
+  }
+  
+  .subtitle {
+    display: none;
+  }
+  
+  .icon {
+    width: 14px;
+    height: 14px;
+  }
+}

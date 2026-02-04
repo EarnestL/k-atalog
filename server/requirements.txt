@@ -1,0 +1,11 @@
+# Katalog API - production FastAPI backend
+fastapi>=0.115.0,<1
+uvicorn[standard]>=0.32.0,<1
+pydantic>=2.10.0,<3
+pydantic-settings>=2.6.0,<3
+
+# MongoDB (async driver for FastAPI)
+motor>=3.6.0,<4
+
+# Optional: for TestClient and async HTTP
+httpx>=0.28.0,<1

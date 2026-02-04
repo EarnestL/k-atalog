@@ -1,0 +1,214 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  padding-top: 60px;
+  gap: 20px;
+  animation: fadeIn 0.2s ease;
+  cursor: pointer;
+}
+
+/* 3D Card Container */
+.cardContainer {
+  perspective: 1000px;
+  cursor: default;
+}
+
+.card3d {
+  position: relative;
+  width: 280px;
+  height: 440px;
+  cursor: grab;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card3d.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.cardFace {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
+}
+
+.cardBack {
+  transform: rotateY(180deg);
+  background: linear-gradient(135deg, var(--color-pink-400), var(--color-pink-600));
+}
+
+.backContent {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.backPattern {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 255, 255, 0.03) 10px,
+      rgba(255, 255, 255, 0.03) 20px
+    );
+}
+
+.backInfo {
+  text-align: center;
+  color: white;
+  z-index: 1;
+}
+
+.backLogo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-tight);
+  margin-bottom: 16px;
+}
+
+.backInfo p {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  opacity: 0.9;
+  margin: 4px 0;
+}
+
+/* Card Info */
+.info {
+  text-align: center;
+  color: white;
+  cursor: pointer;
+}
+
+.memberName {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-tight);
+  margin-bottom: 4px;
+}
+
+.albumName {
+  font-size: 1rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.01em;
+  opacity: 0.9;
+  margin-bottom: 2px;
+}
+
+.version {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  opacity: 0.6;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 12px;
+  cursor: default;
+}
+
+.controlBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  transition: all var(--transition-fast);
+}
+
+.controlBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.hint {
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .overlay {
+    padding-top: 40px;
+    gap: 16px;
+  }
+  
+  .card3d {
+    width: 220px;
+    height: 345px;
+  }
+  
+  .memberName {
+    font-size: 1.25rem;
+  }
+  
+  .controls {
+    gap: 8px;
+  }
+  
+  .controlBtn {
+    padding: 8px 16px;
+    font-size: 0.8125rem;
+  }
+  
+  .hint {
+    font-size: 0.6875rem;
+  }
+}

@@ -1,0 +1,141 @@
+.searchBar {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-normal);
+  overflow: hidden;
+}
+
+.searchBar:hover {
+  border-color: var(--color-pink-200);
+}
+
+.searchBar.focused {
+  border-color: var(--color-pink-400);
+  box-shadow: 0 0 0 3px var(--color-pink-100);
+}
+
+/* Landing variant - larger, centered */
+.landing {
+  width: 100%;
+  max-width: 700px;
+  height: 56px;
+  padding: 0 20px;
+  box-shadow: var(--shadow-md);
+}
+
+.landing .input {
+  font-size: 1rem;
+}
+
+/* Header variant - smaller, compact */
+.header {
+  width: 100%;
+  max-width: 400px;
+  height: 44px;
+  padding: 0 16px;
+}
+
+.header .input {
+  font-size: 0.875rem;
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.searchIcon {
+  color: var(--color-text-tertiary);
+  transition: color var(--transition-fast);
+}
+
+.focused .searchIcon {
+  color: var(--color-pink-500);
+}
+
+.input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0 12px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.01em;
+  color: var(--color-text-primary);
+  min-width: 0;
+}
+
+.input::placeholder {
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-tertiary);
+}
+
+.clearBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-tertiary);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.clearBtn.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.clearBtn.visible:hover {
+  background: var(--color-pink-100);
+  color: var(--color-pink-600);
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .landing {
+    height: 50px;
+    padding: 0 16px;
+  }
+  
+  .landing .input {
+    font-size: 0.9375rem;
+  }
+  
+  .landing .input::placeholder {
+    font-size: 0.875rem;
+  }
+  
+  .header {
+    height: 38px;
+    padding: 0 12px;
+    max-width: none;
+  }
+  
+  .header .input {
+    font-size: 0.8125rem;
+    padding: 0 8px;
+  }
+  
+  .header .input::placeholder {
+    font-size: 0.75rem;
+  }
+  
+  .iconWrapper svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .clearBtn {
+    width: 24px;
+    height: 24px;
+  }
+}

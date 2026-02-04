@@ -1,9 +1,17 @@
+import { useEffect } from 'react'
 import SearchBar from '../components/SearchBar'
 import { useTheme } from '../hooks/useTheme'
 import styles from './Landing.module.css'
 
 export default function Landing() {
   const { theme, toggleTheme } = useTheme()
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [])
 
   return (
     <div className={styles.landing}>

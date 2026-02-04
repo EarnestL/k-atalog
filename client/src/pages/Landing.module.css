@@ -4,11 +4,17 @@
   position: relative;
 }
 
-.themeToggle {
+.topRight {
   position: absolute;
   top: 20px;
   right: 20px;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.themeToggle {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,6 +25,8 @@
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-md);
   transition: all var(--transition-fast);
+  border: none;
+  cursor: pointer;
 }
 
 .themeToggle:hover {
@@ -122,6 +130,43 @@
 .quickLink:hover {
   background: var(--color-pink-100);
   transform: translateY(-1px);
+}
+
+.authPrompt {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+}
+
+.authLink {
+  color: var(--color-pink-600);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.authLink:hover {
+  color: var(--color-pink-500);
+}
+
+.profileBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: none;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.profileBtn:hover {
+  background: var(--color-pink-50);
+  color: var(--color-pink-500);
+  transform: scale(1.05);
 }
 
 /* Decorative circles */

@@ -1,8 +1,10 @@
 /**
  * API client for Katalog backend.
  * Base URL is configurable via VITE_API_BASE_URL (see src/api/config.ts).
+ * Sends Supabase access token when user is logged in.
  */
 
+import { supabase } from '../lib/supabase'
 import { apiBase } from './config'
 
 export interface Photocard {
@@ -49,13 +51,23 @@ export interface SearchResult {
 
 const FETCH_TIMEOUT_MS = 20000
 
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (token) {
+    return { Authorization: `Bearer ${token}` }
+  }
+  return {}
+}
+
 async function get<T>(path: string): Promise<T> {
   const url = `${apiBase}${path}`
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  const headers = await getAuthHeaders()
   let res: Response
   try {
-    res = await fetch(url, { signal: controller.signal })
+    res = await fetch(url, { signal: controller.signal, headers })
   } catch (err) {
     clearTimeout(timeoutId)
     const msg =
@@ -132,4 +144,8 @@ export const api = {
 
   /** Get all data (for empty search) */
   searchAll: () => get<SearchResult>('/search/all'),
+
+  /** Get current user (requires auth). Returns 401 if not authenticated. */
+  getMe: () =>
+    get<{ user: { id: string; email?: string; role?: string } }>('/auth/me'),
 }

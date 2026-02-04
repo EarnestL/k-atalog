@@ -2,8 +2,9 @@
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 
+from app.core.supabase_auth import verify_supabase_token
 from app.schemas.group import GroupSchema
 from app.schemas.member import MemberSchema
 from app.services.data_loader import (
@@ -50,3 +51,41 @@ async def get_member_or_404(group_id: str, member_id: str) -> MemberSchema:
 
 # Type aliases for use in route signatures
 GroupDep = Annotated[GroupSchema, Depends(get_group_or_404)]
+
+
+# ---- Auth (Supabase JWT) ----
+
+
+def _extract_bearer_token(authorization: str | None) -> str | None:
+    """Extract Bearer token from Authorization header."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    return authorization[7:].strip() or None
+
+
+async def get_current_user_optional(
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict | None:
+    """
+    Dependency: verify Supabase JWT from Authorization header.
+    Returns payload (sub, email, role, ...) or None if not authenticated.
+    """
+    token = _extract_bearer_token(authorization)
+    if not token:
+        return None
+    return verify_supabase_token(token)
+
+
+async def get_current_user(
+    user: Annotated[dict | None, Depends(get_current_user_optional)] = None,
+) -> dict:
+    """
+    Dependency: require authenticated user. Raises 401 if not authenticated.
+    """
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user

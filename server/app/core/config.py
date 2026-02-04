@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     secret_key: str = INSECURE_SECRET_PLACEHOLDER
     access_token_expire_minutes: int = 30
 
+    # Supabase Auth – JWT verification (from Project Settings → API → JWT Settings)
+    supabase_jwt_secret: str = ""
+    supabase_jwt_audience: str = "authenticated"
+
     @model_validator(mode="after")
     def require_strong_secret_in_production(self) -> "Settings":
         """In production, SECRET_KEY must not be the default placeholder."""

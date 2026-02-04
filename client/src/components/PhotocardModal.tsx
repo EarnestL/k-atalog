@@ -66,10 +66,6 @@ export default function PhotocardModal({ photocard, onClose }: PhotocardModalPro
     handleStart(e.clientX, e.clientY)
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    handleMove(e.clientX, e.clientY)
-  }
-
   // Touch events
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault() // Prevent scroll
@@ -159,7 +155,7 @@ export default function PhotocardModal({ photocard, onClose }: PhotocardModalPro
           <div className={styles.cardFace}>
             <img 
               src={photocard.imageUrl} 
-              alt={photocard.name}
+              alt={`${photocard.memberName} - ${photocard.album}`}
               className={styles.cardImage}
               draggable={false}
             />

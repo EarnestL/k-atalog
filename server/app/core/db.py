@@ -10,7 +10,9 @@ from typing import Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from app.core.config import get_settings
+from app.core.logging_config import get_logger
 
+logger = get_logger(__name__)
 _client: Optional[AsyncIOMotorClient] = None
 
 
@@ -18,8 +20,7 @@ async def connect_mongodb() -> bool:
     """
     Connect to MongoDB using URI from settings.
     Call on app startup only when MONGODB_URI is set.
-    Returns True if connected successfully, False otherwise.
-    Never logs or exposes the connection string.
+    Returns True if connected successfully. On failure, logs the error and re-raises.
     """
     global _client
     settings = get_settings()
@@ -28,13 +29,18 @@ async def connect_mongodb() -> bool:
     try:
         _client = AsyncIOMotorClient(
             settings.mongodb_uri,
-            serverSelectionTimeoutMS=5000,
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=10000,
         )
         await _client.admin.command("ping")
         return True
-    except Exception:
+    except Exception as e:
         _client = None
-        return False
+        logger.error(
+            "MongoDB connection failed: %s. Check MONGODB_URI, network, and Atlas IP allowlist.",
+            e,
+        )
+        raise
 
 
 async def close_mongodb() -> None:

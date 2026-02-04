@@ -1,5 +1,6 @@
 """FastAPI application factory and lifecycle."""
 
+import asyncio
 from contextlib import asynccontextmanager
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -15,6 +16,9 @@ from app.services.data_loader import load_data, seed_mongodb_if_empty
 
 logger = get_logger(__name__)
 
+# Max time to wait for MongoDB connect + seed when MongoDB is required
+STARTUP_MONGODB_TIMEOUT_SECONDS = 20
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security-related HTTP headers to all responses."""
@@ -28,31 +32,43 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+async def _startup_mongodb_or_fallback() -> None:
+    """When MongoDB is configured: connect and seed (required; no file fallback). Otherwise load file data."""
+    settings = get_settings()
+    if not settings.mongodb_configured:
+        logger.info("MongoDB not configured (using file/hardcoded data)")
+        load_data()
+        return
+
+    async def _connect_and_seed() -> None:
+        await connect_mongodb()
+        logger.info("MongoDB connected")
+        try:
+            await seed_mongodb_if_empty()
+        except Exception as e:
+            logger.warning("MongoDB seed failed: %s", e)
+
+    try:
+        await asyncio.wait_for(_connect_and_seed(), timeout=STARTUP_MONGODB_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        logger.error(
+            "MongoDB connection timed out after %s s. "
+            "Check: 1) Atlas cluster is running, 2) Your IP is in Atlas Network Access (or use 0.0.0.0/0 for dev), "
+            "3) MONGODB_URI is correct, 4) No firewall/VPN blocking outbound connections.",
+            STARTUP_MONGODB_TIMEOUT_SECONDS,
+        )
+        raise
+    except Exception:
+        # db.connect_mongodb() already logged the error and re-raised; propagate so server fails to start
+        raise
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: optional MongoDB + seed if empty, else in-memory data. Shutdown: cleanup."""
+    """Startup: MongoDB when configured (required), else file data. Shutdown: cleanup."""
     setup_logging()
     logger.info("Starting %s", get_settings().app_name)
-    settings = get_settings()
-    if settings.mongodb_configured:
-        if await connect_mongodb():
-            logger.info("MongoDB connected")
-            try:
-                await seed_mongodb_if_empty()
-            except Exception as e:
-                logger.warning("MongoDB seed failed: %s", e)
-        else:
-            logger.warning("MongoDB connection failed; check MONGODB_URI and network")
-            try:
-                load_data()
-            except Exception as e:
-                logger.warning("Data not loaded: %s. Some endpoints may fail.", e)
-    else:
-        logger.info("MongoDB not configured (using file/hardcoded data)")
-        try:
-            load_data()
-        except Exception as e:
-            logger.warning("Data not loaded: %s. Some endpoints may fail.", e)
+    await _startup_mongodb_or_fallback()
     yield
     await close_mongodb()
     logger.info("Shutdown complete")
@@ -86,7 +102,10 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     def root() -> dict:
-        return {"message": "Katalog API", "docs": "/docs", "api": settings.api_v1_prefix}
+        out: dict = {"message": "Katalog API", "api": settings.api_v1_prefix}
+        if docs_enabled:
+            out["docs"] = "/docs"
+        return out
 
     return app
 

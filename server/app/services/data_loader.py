@@ -18,6 +18,9 @@ from app.services.hardcoded_data import HARDCODED_RAW
 
 logger = get_logger(__name__)
 
+# Max time for a single MongoDB query (ms); prevents requests hanging forever
+MONGODB_QUERY_TIMEOUT_MS = 15000
+
 # In-memory store when MongoDB is not used
 _groups: List[GroupSchema] = []
 _photocards: List[PhotocardSchema] = []
@@ -127,7 +130,7 @@ async def get_groups_async() -> List[GroupSchema]:
     if is_connected():
         db = get_database()
         if db is not None:
-            cursor = db[GROUPS_COLLECTION].find({})
+            cursor = db[GROUPS_COLLECTION].find({}).max_time_ms(MONGODB_QUERY_TIMEOUT_MS)
             return [GroupSchema.model_validate(_group_doc_for_validation(d)) async for d in cursor]
     _ensure_memory_loaded()
     return _groups
@@ -149,7 +152,9 @@ async def get_group_by_id_async(group_id: str) -> GroupSchema | None:
     if is_connected():
         db = get_database()
         if db is not None:
-            doc = await db[GROUPS_COLLECTION].find_one({"id": group_id})
+            doc = await db[GROUPS_COLLECTION].find_one(
+                {"id": group_id}, max_time_ms=MONGODB_QUERY_TIMEOUT_MS
+            )
             return GroupSchema.model_validate(_group_doc_for_validation(doc)) if doc else None
     _ensure_memory_loaded()
     for g in _groups:

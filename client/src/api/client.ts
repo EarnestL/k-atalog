@@ -46,8 +46,28 @@ export interface SearchResult {
   photocards: Photocard[]
 }
 
+const FETCH_TIMEOUT_MS = 20000
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${apiBase}${path}`)
+  const url = `${apiBase}${path}`
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  let res: Response
+  try {
+    res = await fetch(url, { signal: controller.signal })
+  } catch (err) {
+    clearTimeout(timeoutId)
+    const msg =
+      err instanceof Error ? err.message : String(err)
+    const isTimeout = msg.toLowerCase().includes('abort')
+    throw new Error(
+      isTimeout
+        ? `Request timed out after ${FETCH_TIMEOUT_MS / 1000}s. Is the API server running? If using MongoDB, check it is reachable.`
+        : `API request failed: ${msg}. ` +
+            (url.startsWith('http') ? 'Check the API server is running and CORS is allowed.' : 'Ensure the dev server proxy target is correct (VITE_API_PROXY_TARGET).')
+    )
+  }
+  clearTimeout(timeoutId)
   if (!res.ok) {
     const text = await res.text()
     throw new Error(res.status === 404 ? 'Not found' : text || `HTTP ${res.status}`)

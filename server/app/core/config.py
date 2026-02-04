@@ -1,13 +1,20 @@
 """Application configuration using pydantic-settings."""
 
 from functools import lru_cache
-from typing import List, Union
+from typing import List
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Default secret is insecure; production must set a strong SECRET_KEY in .env
 INSECURE_SECRET_PLACEHOLDER = "change-me-in-production-use-openssl-rand-hex-32"
+
+_DEFAULT_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+
+
+def _parse_origins(s: str) -> List[str]:
+    parsed = [x.strip() for x in s.split(",") if x.strip()]
+    return parsed if parsed else ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
 class Settings(BaseSettings):
@@ -31,19 +38,13 @@ class Settings(BaseSettings):
 
     # API
     api_v1_prefix: str = "/api/v1"
-    allowed_origins: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Store as str so .env is never JSON-parsed; allowed_origins (list) is computed below
+    allowed_origins_raw: str = Field(default=_DEFAULT_ORIGINS, alias="allowed_origins")
 
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def parse_allowed_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        """Parse comma-separated ALLOWED_ORIGINS from .env into a list. Never return empty."""
-        default_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
-        if isinstance(v, str):
-            parsed = [x.strip() for x in v.split(",") if x.strip()]
-            return parsed if parsed else default_origins
-        if isinstance(v, list):
-            return v if v else default_origins
-        return default_origins
+    @computed_field
+    @property
+    def allowed_origins(self) -> List[str]:
+        return _parse_origins(self.allowed_origins_raw)
 
     # MongoDB – store in .env only; never commit .env or log this value
     # Leave empty to use file/hardcoded data instead of MongoDB

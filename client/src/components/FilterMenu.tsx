@@ -236,7 +236,7 @@ export default function FilterMenu({
 
   useEffect(() => {
     if (!isOpen) return
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: DocumentEventMap['mousedown']) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setIsOpen(false)
         setOpenSubmenu(null)

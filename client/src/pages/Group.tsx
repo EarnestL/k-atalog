@@ -32,8 +32,26 @@ export default function Group() {
   const { groupId } = useParams<{ groupId: string }>()
   const [group, setGroup] = useState<Group | null>(null)
   const [photocards, setPhotocards] = useState<Photocard[]>([])
+  const [totalPhotocards, setTotalPhotocards] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadMoreLoading, setLoadMoreLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const hasMorePhotocards = photocards.length < totalPhotocards
+
+  const handleLoadMorePhotocards = () => {
+    const id = groupId || ''
+    if (!id || loadMoreLoading || !hasMorePhotocards) return
+    setLoadMoreLoading(true)
+    api
+      .getPhotocardsByGroup(id, { limit: 40, offset: photocards.length })
+      .then((data) => {
+        setPhotocards((prev) => [...prev, ...data.photocards])
+        setTotalPhotocards(data.totalPhotocards)
+      })
+      .catch(() => {})
+      .finally(() => setLoadMoreLoading(false))
+  }
 
   const [memberFilter, setMemberFilter] = useState<string>('all')
   const [albumFilter, setAlbumFilter] = useState<string>('all')
@@ -46,17 +64,22 @@ export default function Group() {
     if (!id) {
       setGroup(null)
       setPhotocards([])
+      setTotalPhotocards(0)
       setLoading(false)
       return
     }
     let cancelled = false
     setLoading(true)
     setError(null)
-    Promise.all([api.getGroup(id), api.getPhotocardsByGroup(id)])
-      .then(([g, pcs]) => {
+    Promise.all([
+      api.getGroup(id),
+      api.getPhotocardsByGroup(id, { limit: 40, offset: 0 }),
+    ])
+      .then(([g, data]) => {
         if (!cancelled) {
           setGroup(g)
-          setPhotocards(pcs)
+          setPhotocards(data.photocards)
+          setTotalPhotocards(data.totalPhotocards)
         }
       })
       .catch((err) => {
@@ -211,12 +234,27 @@ export default function Group() {
 
         <div className={styles.container}>
           <section className={styles.section}>
-            <div className={styles.photocardsGrid}>
-              {filteredPhotocards.map(pc => (
-                <PhotocardCard key={pc.id} photocard={pc} showMember />
-              ))}
+            <div className={styles.photocardsSection}>
+              <div className={styles.photocardsGrid}>
+                {filteredPhotocards.map(pc => (
+                  <PhotocardCard key={pc.id} photocard={pc} showMember />
+                ))}
+              </div>
+              {hasMorePhotocards && (
+                <div className={styles.photocardsLoadMoreWrap}>
+                  <div className={styles.photocardsFade} aria-hidden />
+                  <button
+                    type="button"
+                    className={styles.loadMoreBtn}
+                    onClick={handleLoadMorePhotocards}
+                    disabled={loadMoreLoading}
+                  >
+                    {loadMoreLoading ? 'Loading...' : 'Load more'}
+                  </button>
+                </div>
+              )}
             </div>
-            
+
             {filteredPhotocards.length === 0 && (
               <div className={styles.empty}>
                 <p>No photocards found for this filter</p>

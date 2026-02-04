@@ -8,7 +8,12 @@ import styles from './Search.module.css'
 
 type Tab = 'all' | 'groups' | 'photocards'
 
-const emptyResults: SearchResult = { groups: [], members: [], photocards: [] }
+const emptyResults: SearchResult = {
+  groups: [],
+  members: [],
+  photocards: [],
+  totalPhotocards: 0,
+}
 
 export default function Search() {
   const [searchParams] = useSearchParams()
@@ -16,7 +21,29 @@ export default function Search() {
   const [activeTab, setActiveTab] = useState<Tab>('all')
   const [results, setResults] = useState<SearchResult>(emptyResults)
   const [loading, setLoading] = useState(false)
+  const [loadMoreLoading, setLoadMoreLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const hasMorePhotocards =
+    results.photocards.length < results.totalPhotocards
+
+  const handleLoadMorePhotocards = () => {
+    if (loadMoreLoading || !hasMorePhotocards) return
+    setLoadMoreLoading(true)
+    api
+      .search(query, { pcLimit: 40, pcOffset: results.photocards.length })
+      .then((data) => {
+        setResults((prev) => ({
+          ...prev,
+          groups: data.groups,
+          members: data.members,
+          photocards: [...prev.photocards, ...data.photocards],
+          totalPhotocards: data.totalPhotocards,
+        }))
+      })
+      .catch(() => {})
+      .finally(() => setLoadMoreLoading(false))
+  }
 
   useEffect(() => {
     if (!query.trim()) {
@@ -27,7 +54,7 @@ export default function Search() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    api.search(query)
+    api.search(query, { pcLimit: 40, pcOffset: 0 })
       .then((data) => {
         if (!cancelled) setResults(data)
       })
@@ -46,9 +73,9 @@ export default function Search() {
   }
 
   const tabs: { id: Tab; label: string; count: number }[] = [
-    { id: 'all', label: 'All', count: results.groups.length + results.photocards.length },
+    { id: 'all', label: 'All', count: results.groups.length + results.totalPhotocards },
     { id: 'groups', label: 'Groups', count: results.groups.length },
-    { id: 'photocards', label: 'Photocards', count: results.photocards.length },
+    { id: 'photocards', label: 'Photocards', count: results.totalPhotocards },
   ]
 
   if (error) {
@@ -179,10 +206,25 @@ export default function Search() {
                 {activeTab === 'all' && (
                   <h2 className={styles.sectionTitle}>Photocards</h2>
                 )}
-                <div className={styles.photocardsGrid}>
-                  {results.photocards.slice(0, activeTab === 'all' ? 12 : undefined).map(pc => (
-                    <PhotocardCard key={pc.id} photocard={pc} showMember />
-                  ))}
+                <div className={styles.photocardsSection}>
+                  <div className={styles.photocardsGrid}>
+                    {results.photocards.map(pc => (
+                      <PhotocardCard key={pc.id} photocard={pc} showMember />
+                    ))}
+                  </div>
+                  {hasMorePhotocards && (
+                    <div className={styles.photocardsLoadMoreWrap}>
+                      <div className={styles.photocardsFade} aria-hidden />
+                      <button
+                        type="button"
+                        className={styles.loadMoreBtn}
+                        onClick={handleLoadMorePhotocards}
+                        disabled={loadMoreLoading}
+                      >
+                        {loadMoreLoading ? 'Loading...' : 'Load more'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </section>
             )}

@@ -17,6 +17,7 @@ def _build_search_result(result: dict) -> SearchResultSchema:
         groups=result["groups"],
         members=result["members"],
         photocards=result["photocards"],
+        total_photocards=result["total_photocards"],
     )
 
 
@@ -32,10 +33,12 @@ async def search(
         max_length=SEARCH_QUERY_MAX_LENGTH,
         description="Search query",
     ),
+    pc_limit: int = Query(40, ge=1, le=100, description="Page size for photocards"),
+    pc_offset: int = Query(0, ge=0, description="Offset for photocards"),
 ) -> SearchResultSchema:
     """Search groups, members, and photocards by query string."""
     try:
-        result = await search_catalog_async(q)
+        result = await search_catalog_async(q, pc_limit=pc_limit, pc_offset=pc_offset)
         return _build_search_result(result)
     except Exception as e:
         logger.exception("Search failed for q=%r: %s", q, e)
@@ -45,10 +48,13 @@ async def search(
 
 
 @router.get("/all", response_model=SearchResultSchema)
-async def search_all() -> SearchResultSchema:
+async def search_all(
+    pc_limit: int = Query(40, ge=1, le=100, description="Page size for photocards"),
+    pc_offset: int = Query(0, ge=0, description="Offset for photocards"),
+) -> SearchResultSchema:
     """Return all groups, members, and photocards (empty query)."""
     try:
-        result = await search_catalog_async("")
+        result = await search_catalog_async("", pc_limit=pc_limit, pc_offset=pc_offset)
         return _build_search_result(result)
     except Exception as e:
         logger.exception("Search all failed: %s", e)

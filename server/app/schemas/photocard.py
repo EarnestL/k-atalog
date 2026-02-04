@@ -1,8 +1,17 @@
 """Photocard-related Pydantic schemas."""
 
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class GroupPhotocardsResponseSchema(BaseModel):
+    """Paginated photocards for a group (matches client expectation)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    photocards: List["PhotocardSchema"]
+    total_photocards: int = Field(..., alias="totalPhotocards")
 
 
 class PhotocardSchema(BaseModel):

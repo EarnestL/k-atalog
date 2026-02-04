@@ -253,10 +253,62 @@
 }
 
 /* Grids */
+.photocardsSection {
+  position: relative;
+}
+
 .photocardsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 16px;
+}
+
+.photocardsLoadMoreWrap {
+  margin-top: -64px;
+  position: relative;
+  padding-top: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.photocardsFade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--color-bg-primary)
+  );
+}
+
+.loadMoreBtn {
+  margin-top: 16px;
+  padding: 10px 24px;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.01em;
+  color: var(--color-pink-600);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.loadMoreBtn:hover:not(:disabled) {
+  background: var(--color-pink-50);
+  border-color: var(--color-pink-200);
+  color: var(--color-pink-700);
+}
+
+.loadMoreBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* Empty State */

@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import List
 
+from bson import ObjectId
+
 from app.core.db import (
     GROUPS_COLLECTION,
     PHOTOCARDS_COLLECTION,
@@ -77,7 +79,9 @@ def _ensure_memory_loaded() -> None:
 # ---- MongoDB seed ----
 
 async def seed_mongodb_if_empty() -> None:
-    """If MongoDB is connected and collections are empty, seed from file/hardcoded data."""
+    """If MongoDB is connected and collections are empty, seed from file/hardcoded data.
+    Uses MongoDB _id as the group id in API responses; photocards get groupId = that _id.
+    """
     db = get_database()
     if db is None:
         return
@@ -86,8 +90,9 @@ async def seed_mongodb_if_empty() -> None:
     if await groups_coll.count_documents({}) > 0:
         return
     raw = _raw_fallback()
-    # Build GroupSchema list and insert as camelCase docs
     groups_raw = raw.get("groups", [])
+    # Map legacy group id -> MongoDB _id (string) so photocards can use it as groupId
+    group_id_to_mongo_id: dict[str, str] = {}
     for g in groups_raw:
         g_data = GroupDataSchema.model_validate(g)
         group = GroupSchema(
@@ -99,10 +104,15 @@ async def seed_mongodb_if_empty() -> None:
             image_url=g_data.image_url,
             members=list(g_data.members),
         )
-        await groups_coll.insert_one(group.model_dump(by_alias=True))
-    # Photocards
+        result = await groups_coll.insert_one(group.model_dump(by_alias=True))
+        if result.inserted_id:
+            group_id_to_mongo_id[g_data.id] = str(result.inserted_id)
     for p in raw.get("photocards", []):
         doc = PhotocardSchema.model_validate(p).model_dump(by_alias=True)
+        # Store groupId as ObjectId for proper references and indexing
+        legacy_group_id = doc.get("groupId")
+        if legacy_group_id and legacy_group_id in group_id_to_mongo_id:
+            doc["groupId"] = ObjectId(group_id_to_mongo_id[legacy_group_id])
         await photocards_coll.insert_one(doc)
     logger.info("Seeded MongoDB with %d groups and %d photocards", len(groups_raw), len(raw.get("photocards", [])))
 
@@ -110,14 +120,21 @@ async def seed_mongodb_if_empty() -> None:
 # ---- Async data access (MongoDB or in-memory) ----
 
 def _doc_for_validation(d: dict) -> dict:
-    """Strip MongoDB _id so Pydantic validation doesn't see ObjectId."""
+    """Convert MongoDB doc for Pydantic: use _id as id (string), drop _id, stringify any ObjectId values."""
     if d is None:
         return d
-    return {k: v for k, v in d.items() if k != "_id"}
+    out = {}
+    for k, v in d.items():
+        if k == "_id":
+            continue
+        out[k] = str(v) if isinstance(v, ObjectId) else v
+    if "_id" in d:
+        out["id"] = str(d["_id"])
+    return out
 
 
 def _group_doc_for_validation(d: dict) -> dict:
-    """Strip _id from group and each member (members do not require groupId/groupName)."""
+    """Use _id as group id; strip _id from group and each member."""
     if d is None:
         return d
     d = _doc_for_validation(d)
@@ -147,14 +164,29 @@ async def get_photocards_async() -> List[PhotocardSchema]:
     return _photocards
 
 
+def _is_objectid_string(s: str) -> bool:
+    """True if s is a 24-char hex string (valid MongoDB ObjectId)."""
+    return len(s) == 24 and all(c in "0123456789abcdefABCDEF" for c in s)
+
+
 async def get_group_by_id_async(group_id: str) -> GroupSchema | None:
-    """Return a single group by id or None."""
+    """Return a single group by id (MongoDB _id string or legacy id) or None."""
     if is_connected():
         db = get_database()
         if db is not None:
-            doc = await db[GROUPS_COLLECTION].find_one(
-                {"id": group_id}, max_time_ms=MONGODB_QUERY_TIMEOUT_MS
-            )
+            doc = None
+            if _is_objectid_string(group_id):
+                try:
+                    doc = await db[GROUPS_COLLECTION].find_one(
+                        {"_id": ObjectId(group_id)},
+                        max_time_ms=MONGODB_QUERY_TIMEOUT_MS,
+                    )
+                except Exception:
+                    pass
+            if doc is None:
+                doc = await db[GROUPS_COLLECTION].find_one(
+                    {"id": group_id}, max_time_ms=MONGODB_QUERY_TIMEOUT_MS
+                )
             return GroupSchema.model_validate(_group_doc_for_validation(doc)) if doc else None
     _ensure_memory_loaded()
     for g in _groups:
@@ -180,22 +212,42 @@ async def get_photocards_by_group_async(group_id: str) -> List[PhotocardSchema]:
     return [p for p in all_pc if p.group_id == group_id]
 
 
+async def get_photocards_by_group_paginated_async(
+    group_id: str,
+    limit: int = 40,
+    offset: int = 0,
+) -> dict:
+    """Return paginated photocards for a group and total count."""
+    all_pc = await get_photocards_by_group_async(group_id)
+    total = len(all_pc)
+    page = all_pc[offset : offset + limit]
+    return {"photocards": page, "total_photocards": total}
+
+
 async def get_photocards_by_member_async(member_id: str) -> List[PhotocardSchema]:
     """Return photocards for a member."""
     all_pc = await get_photocards_async()
     return [p for p in all_pc if p.member_id == member_id]
 
 
-async def search_catalog_async(query: str) -> dict:
-    """Search groups, members, and photocards by query string."""
+async def search_catalog_async(
+    query: str,
+    pc_limit: int = 40,
+    pc_offset: int = 0,
+) -> dict:
+    """Search groups, members, and photocards by query string. Photocards are paginated."""
     q = query.lower().strip()
     groups = await get_groups_async()
     all_pc = await get_photocards_async()
     if not q:
+        all_members = [m for g in groups for m in g.members]
+        total_photocards = len(all_pc)
+        photocards = all_pc[pc_offset : pc_offset + pc_limit]
         return {
             "groups": groups,
-            "members": [m for g in groups for m in g.members],
-            "photocards": all_pc,
+            "members": all_members,
+            "photocards": photocards,
+            "total_photocards": total_photocards,
         }
     matched_groups = [
         g for g in groups
@@ -210,10 +262,13 @@ async def search_catalog_async(query: str) -> dict:
         if q in (p.album or "").lower() or q in (p.member_name or "").lower()
         or q in (p.group_name or "").lower() or q in (p.version or "").lower()
     ]
+    total_photocards = len(matched_photocards)
+    photocards = matched_photocards[pc_offset : pc_offset + pc_limit]
     return {
         "groups": matched_groups,
         "members": matched_members,
-        "photocards": matched_photocards,
+        "photocards": photocards,
+        "total_photocards": total_photocards,
     }
 
 

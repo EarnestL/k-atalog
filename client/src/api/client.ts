@@ -44,6 +44,7 @@ export interface SearchResult {
   groups: Group[]
   members: Member[]
   photocards: Photocard[]
+  totalPhotocards: number
 }
 
 const FETCH_TIMEOUT_MS = 20000
@@ -101,13 +102,33 @@ export const api = {
   /** List all photocards */
   getPhotocards: () => get<Photocard[]>('/photocards'),
 
-  /** Get photocards for a group */
-  getPhotocardsByGroup: (groupId: string) =>
-    get<Photocard[]>(`/photocards/by-group/${encodeURIComponent(groupId)}`),
+  /** Get photocards for a group (paginated). */
+  getPhotocardsByGroup: (
+    groupId: string,
+    options?: { limit?: number; offset?: number }
+  ) => {
+    const params = new URLSearchParams()
+    const limit = options?.limit ?? 40
+    const offset = options?.offset ?? 0
+    params.set('limit', String(limit))
+    params.set('offset', String(offset))
+    return get<{ photocards: Photocard[]; totalPhotocards: number }>(
+      `/photocards/by-group/${encodeURIComponent(groupId)}?${params.toString()}`
+    )
+  },
 
-  /** Search groups, members, and photocards */
-  search: (q: string) =>
-    get<SearchResult>(`/search?q=${encodeURIComponent(q)}`),
+  /** Search groups, members, and photocards (photocards paginated). */
+  search: (
+    q: string,
+    options?: { pcLimit?: number; pcOffset?: number }
+  ) => {
+    const params = new URLSearchParams({ q })
+    const limit = options?.pcLimit ?? 40
+    const offset = options?.pcOffset ?? 0
+    params.set('pc_limit', String(limit))
+    params.set('pc_offset', String(offset))
+    return get<SearchResult>(`/search?${params.toString()}`)
+  },
 
   /** Get all data (for empty search) */
   searchAll: () => get<SearchResult>('/search/all'),

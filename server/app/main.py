@@ -1,9 +1,12 @@
 """FastAPI application factory and lifecycle."""
 
 import asyncio
+import time
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +22,47 @@ logger = get_logger(__name__)
 # Max time to wait for MongoDB connect + seed when MongoDB is required
 STARTUP_MONGODB_TIMEOUT_SECONDS = 20
 
+# Rate limit: 100 requests per minute per client IP
+RATE_LIMIT_REQUESTS = 100
+RATE_LIMIT_WINDOW_SEC = 60
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+
+
+def _get_client_ip(request: Request) -> str:
+    """Get client IP, considering X-Forwarded-For when behind a proxy."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit_exceeded(ip: str) -> bool:
+    """Check if IP has exceeded rate limit. Uses sliding window."""
+    now = time.monotonic()
+    window_start = now - RATE_LIMIT_WINDOW_SEC
+    timestamps = _rate_limit_store[ip]
+    _rate_limit_store[ip] = [t for t in timestamps if t > window_start]
+    if len(_rate_limit_store[ip]) >= RATE_LIMIT_REQUESTS:
+        return True
+    _rate_limit_store[ip].append(now)
+    return False
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Simple in-memory rate limiting per client IP."""
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        ip = _get_client_ip(request)
+        if _rate_limit_exceeded(ip):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please try again later."},
+                headers={"Retry-After": str(RATE_LIMIT_WINDOW_SEC)},
+            )
+        return await call_next(request)
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security-related HTTP headers to all responses."""
@@ -29,6 +73,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' https: data:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' https:; "
+            "frame-ancestors 'none';"
+        )
         return response
 
 
@@ -90,6 +143,7 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,

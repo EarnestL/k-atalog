@@ -115,7 +115,7 @@ export default function Member() {
                 <p className={styles.koreanName}>{member.koreanName}</p>
                 <div className={styles.stats}>
                   <div className={styles.stat}>
-                    <span className={styles.statNum}>{member.photocardCount}</span>
+                    <span className={styles.statNum}>{photocards.length}</span>
                     <span className={styles.statLabel}>Photocards</span>
                   </div>
                   <div className={styles.stat}>
@@ -149,7 +149,7 @@ export default function Member() {
                   className={`${styles.filterBtn} ${filter === album ? styles.active : ''}`}
                   onClick={() => setFilter(album)}
                 >
-                  {album}
+                  {album === '_other' ? 'Other' : album}
                 </button>
               ))}
             </div>

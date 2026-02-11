@@ -70,3 +70,4 @@ def is_connected() -> bool:
 # Collection names (used by data_loader)
 GROUPS_COLLECTION = "groups"
 PHOTOCARDS_COLLECTION = "photocards"
+SUBMISSIONS_COLLECTION = "submissions"

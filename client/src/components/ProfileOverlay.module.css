@@ -66,7 +66,7 @@
   text-overflow: ellipsis;
 }
 
-.logoutBtn {
+.addPhotocardBtn {
   display: block;
   width: 100%;
   padding: 12px 24px;
@@ -75,6 +75,56 @@
   font-family: inherit;
   text-align: center;
   color: var(--color-pink-600);
+  background: transparent;
+  border: 1px solid #fce7f3;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: 12px;
+}
+
+.addPhotocardBtn:hover:not(:disabled) {
+  background: #fef0f7;
+  transform: translateY(-1px);
+}
+
+.addPhotocardBtn:active:not(:disabled) {
+  background: #fce7f3;
+}
+
+[data-theme="dark"] .addPhotocardBtn {
+  background: transparent;
+  border-color: var(--color-pink-200);
+}
+
+[data-theme="dark"] .addPhotocardBtn:hover:not(:disabled) {
+  background: var(--color-pink-50);
+}
+
+[data-theme="dark"] .addPhotocardBtn:active:not(:disabled) {
+  background: var(--color-pink-100);
+}
+
+.addPhotocardBtn.active {
+  background: #fce7f3;
+  border-color: #fce7f3;
+  cursor: default;
+}
+
+[data-theme="dark"] .addPhotocardBtn.active {
+  background: var(--color-pink-100);
+  border-color: var(--color-pink-100);
+}
+
+.logoutBtn {
+  display: block;
+  width: 100%;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: center;
+  color: #b91c1c;
   background: var(--color-pink-50);
   border: 1px solid var(--color-pink-200);
   border-radius: var(--radius-md);

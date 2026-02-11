@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, health, groups, members, photocards, search
+from app.api.v1.endpoints import auth, health, groups, members, photocards, search, submissions
 from app.core.config import get_settings
 
 api_router = APIRouter()
@@ -14,3 +14,4 @@ api_router.include_router(groups.router)
 api_router.include_router(members.router)
 api_router.include_router(photocards.router)
 api_router.include_router(search.router)
+api_router.include_router(submissions.router)

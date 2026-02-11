@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import AuthOverlay from '../components/AuthOverlay'
 import ProfileOverlay from '../components/ProfileOverlay'
 import SearchBar from '../components/SearchBar'
 import { useAuth } from '../contexts/AuthContext'
@@ -19,10 +20,16 @@ export default function Landing() {
   const { theme, toggleTheme } = useTheme()
   const { user, signOut } = useAuth()
   const [profileOverlayOpen, setProfileOverlayOpen] = useState(false)
+  const [authOverlayOpen, setAuthOverlayOpen] = useState(false)
+
+  const handleProfileClick = () => {
+    if (user) setProfileOverlayOpen(true)
+    else setAuthOverlayOpen(true)
+  }
 
   return (
     <div className={styles.landing}>
-      {/* Top right: Log out (when logged in) + Theme Toggle */}
+      {/* Top right: Profile + Theme Toggle */}
       <div className={styles.topRight}>
         <button 
           className={styles.themeToggle} 
@@ -37,19 +44,17 @@ export default function Landing() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="5" />
               <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-          </svg>
-        )}
+            </svg>
+          )}
         </button>
-        {user && (
-          <button
-            type="button"
-            className={styles.profileBtn}
-            onClick={() => setProfileOverlayOpen(true)}
-            aria-label="Profile"
-          >
-            <ProfileIcon />
-          </button>
-        )}
+        <button
+          type="button"
+          className={styles.profileBtn}
+          onClick={handleProfileClick}
+          aria-label="Profile"
+        >
+          <ProfileIcon />
+        </button>
       </div>
 
       {/* Hero Section */}
@@ -82,6 +87,10 @@ export default function Landing() {
         <div className={styles.decorCircle2} />
         <div className={styles.decorCircle3} />
       </section>
+      <AuthOverlay
+        isOpen={authOverlayOpen}
+        onClose={() => setAuthOverlayOpen(false)}
+      />
       {user && (
         <ProfileOverlay
           isOpen={profileOverlayOpen}

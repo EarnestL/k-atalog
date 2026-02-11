@@ -55,9 +55,18 @@ class Settings(BaseSettings):
     secret_key: str = INSECURE_SECRET_PLACEHOLDER
     access_token_expire_minutes: int = 30
 
-    # Supabase Auth – JWT verification (from Project Settings → API → JWT Settings)
+    # Supabase Auth – JWT verification
+    # SUPABASE_URL: required for JWKS (new signing keys). Same as client VITE_SUPABASE_URL.
+    supabase_url: str = ""
+    # Legacy: from Project Settings → API → JWT Settings (only for HS256 tokens)
     supabase_jwt_secret: str = ""
     supabase_jwt_audience: str = "authenticated"
+
+    @property
+    def supabase_jwks_url(self) -> str:
+        """JWKS endpoint for new Supabase signing keys (ES256)."""
+        base = (self.supabase_url or "").rstrip("/")
+        return f"{base}/auth/v1/.well-known/jwks.json" if base else ""
 
     @model_validator(mode="after")
     def require_strong_secret_in_production(self) -> "Settings":

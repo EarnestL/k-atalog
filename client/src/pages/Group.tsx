@@ -147,7 +147,7 @@ export default function Group() {
     )
   }
 
-  const totalCards = group.members.reduce((sum, m) => sum + m.photocardCount, 0)
+  const totalCards = totalPhotocards
 
   return (
     <div className={styles.page}>
@@ -167,7 +167,7 @@ export default function Group() {
           ]}
           albumOptions={[
             { value: 'all', label: 'All' },
-            ...albums.map(album => ({ value: album, label: album }))
+            ...albums.map(album => ({ value: album, label: album === '_other' ? 'Other' : album }))
           ]}
           memberValue={memberFilter}
           albumValue={albumFilter}
@@ -221,7 +221,7 @@ export default function Group() {
               ]}
               albumOptions={[
                 { value: 'all', label: 'All' },
-                ...albums.map(album => ({ value: album, label: album }))
+                ...albums.map(album => ({ value: album, label: album === '_other' ? 'Other' : album }))
               ]}
               memberValue={memberFilter}
               albumValue={albumFilter}

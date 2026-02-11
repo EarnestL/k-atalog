@@ -1,6 +1,8 @@
 """Load and expose catalog data (groups, members, photocards) from file or MongoDB."""
 
 import json
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
 
@@ -9,6 +11,7 @@ from bson import ObjectId
 from app.core.db import (
     GROUPS_COLLECTION,
     PHOTOCARDS_COLLECTION,
+    SUBMISSIONS_COLLECTION,
     get_database,
     is_connected,
 )
@@ -16,6 +19,7 @@ from app.core.logging_config import get_logger
 from app.schemas.group import GroupDataSchema, GroupSchema
 from app.schemas.member import MemberSchema
 from app.schemas.photocard import PhotocardSchema
+from app.schemas.submission import SubmissionSchema
 from app.services.hardcoded_data import HARDCODED_RAW
 
 logger = get_logger(__name__)
@@ -270,6 +274,126 @@ async def search_catalog_async(
         "photocards": photocards,
         "total_photocards": total_photocards,
     }
+
+
+def _normalize_id(s: str) -> str:
+    """Lowercase and remove spaces for memberId/groupId."""
+    return "".join(s.lower().split())
+
+
+async def insert_photocard_async(
+    member_name: str,
+    group_name: str,
+    album: str,
+    version: str,
+    year: int,
+    type_: str,
+    image_url: str,
+    back_image_url: str | None = None,
+) -> PhotocardSchema | None:
+    """Insert a new photocard into MongoDB. Returns created photocard or None if not connected."""
+    db = get_database()
+    if db is None:
+        return None
+    member_id = _normalize_id(member_name)
+    group_id_normalized = _normalize_id(group_name)
+    group_doc = await db[GROUPS_COLLECTION].find_one(
+        {"id": group_id_normalized}, max_time_ms=MONGODB_QUERY_TIMEOUT_MS
+    )
+    group_id = str(group_doc["_id"]) if group_doc else group_id_normalized
+    pc_id = f"pc-{uuid.uuid4().hex[:12]}"
+    doc = {
+        "id": pc_id,
+        "memberId": member_id,
+        "memberName": member_name,
+        "groupId": ObjectId(group_id) if _is_objectid_string(group_id) else group_id,
+        "groupName": group_name,
+        "album": album,
+        "version": version,
+        "year": year,
+        "type": type_,
+        "imageUrl": image_url,
+        "backImageUrl": back_image_url,
+    }
+    await db[PHOTOCARDS_COLLECTION].insert_one(doc)
+    return PhotocardSchema.model_validate(_doc_for_validation(doc))
+
+
+async def insert_submission_async(
+    member_name: str,
+    group_name: str,
+    album: str,
+    version: str,
+    year: int,
+    type_: str,
+    image_url: str,
+    user_email: str,
+    photocard_id: str | None,
+    back_image_url: str | None = None,
+    status: str = "accepted",
+) -> SubmissionSchema | None:
+    """Insert a submission record into MongoDB. Returns created submission or None if not connected."""
+    db = get_database()
+    if db is None:
+        return None
+    member_id = _normalize_id(member_name)
+    group_id_normalized = _normalize_id(group_name)
+    group_doc = await db[GROUPS_COLLECTION].find_one(
+        {"id": group_id_normalized}, max_time_ms=MONGODB_QUERY_TIMEOUT_MS
+    )
+    group_id = str(group_doc["_id"]) if group_doc else group_id_normalized
+    sub_id = f"sub-{uuid.uuid4().hex[:12]}"
+    doc = {
+        "id": sub_id,
+        "memberId": member_id,
+        "memberName": member_name,
+        "groupId": group_id,
+        "groupName": group_name,
+        "album": album,
+        "version": version,
+        "year": year,
+        "type": type_,
+        "imageUrl": image_url,
+        "backImageUrl": back_image_url,
+        "userEmail": user_email,
+        "submittedAt": datetime.now(timezone.utc),
+        "status": status,
+        "photocardId": photocard_id,
+    }
+    await db[SUBMISSIONS_COLLECTION].insert_one(doc)
+    return SubmissionSchema.model_validate(_submission_doc_for_validation(doc))
+
+
+def _submission_doc_for_validation(d: dict) -> dict:
+    """Convert submission MongoDB doc for Pydantic (camelCase aliases)."""
+    if d is None:
+        return d
+    out = {}
+    for k, v in d.items():
+        if k == "_id":
+            continue
+        out[k] = str(v) if isinstance(v, ObjectId) else v
+    if "id" not in out and "_id" in d:
+        out["id"] = str(d["_id"])
+    return out
+
+
+async def get_submissions_by_email_async(user_email: str, limit: int = 50) -> List[SubmissionSchema]:
+    """Return submissions for a user, newest first. MongoDB only."""
+    db = get_database()
+    if db is None:
+        return []
+    cursor = (
+        db[SUBMISSIONS_COLLECTION]
+        .find({"userEmail": user_email})
+        .sort("submittedAt", -1)
+        .limit(limit)
+        .max_time_ms(MONGODB_QUERY_TIMEOUT_MS)
+    )
+    results = []
+    async for d in cursor:
+        results.append(SubmissionSchema.model_validate(_submission_doc_for_validation(d)))
+    return results
 
 
 # ---- Sync access (kept for backward compatibility; prefer async) ----

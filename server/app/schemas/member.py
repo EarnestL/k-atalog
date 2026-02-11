@@ -12,7 +12,8 @@ class MemberDataSchema(BaseModel):
     name: str
     korean_name: str = Field(..., alias="koreanName")
     image_url: str = Field(..., alias="imageUrl")
-    photocard_count: int = Field(..., alias="photocardCount")
+    # Deprecated: frontend computes from photocard objects; kept for backward compat when loading legacy data
+    photocard_count: int | None = Field(default=None, alias="photocardCount", exclude=True)
 
 
 # Member in API responses is just member data (no groupId/groupName).

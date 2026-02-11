@@ -26,7 +26,8 @@ export interface MemberData {
   name: string
   koreanName: string
   imageUrl: string
-  photocardCount: number
+  /** @deprecated Computed from photocard objects; no longer from API. */
+  photocardCount?: number
 }
 
 /** Member in API responses; no groupId/groupName (use URL or parent group for context). */
@@ -86,6 +87,70 @@ async function get<T>(path: string): Promise<T> {
     throw new Error(res.status === 404 ? 'Not found' : text || `HTTP ${res.status}`)
   }
   return res.json()
+}
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const url = `${apiBase}${path}`
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  const headers = await getAuthHeaders()
+  const allHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(headers as Record<string, string>),
+  }
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: allHeaders,
+      body: JSON.stringify(body),
+    })
+  } catch (err) {
+    clearTimeout(timeoutId)
+    const msg = err instanceof Error ? err.message : String(err)
+    const isTimeout = msg.toLowerCase().includes('abort')
+    throw new Error(
+      isTimeout
+        ? `Request timed out after ${FETCH_TIMEOUT_MS / 1000}s`
+        : `API request failed: ${msg}`
+    )
+  }
+  clearTimeout(timeoutId)
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export interface Submission {
+  id: string
+  memberId: string
+  memberName: string
+  groupId: string
+  groupName: string
+  album: string
+  version: string
+  year: number
+  type: 'album' | 'pob' | 'fansign' | 'special'
+  imageUrl: string
+  backImageUrl?: string
+  userEmail: string
+  submittedAt: string
+  status: 'accepted' | 'rejected' | 'pending'
+  photocardId?: string
+}
+
+export interface PhotocardCreatePayload {
+  memberName: string
+  groupName: string
+  album: string
+  version: string
+  year: number
+  type: 'album' | 'special'
+  imageUrl: string
+  backImageUrl?: string
 }
 
 export const api = {
@@ -148,4 +213,11 @@ export const api = {
   /** Get current user (requires auth). Returns 401 if not authenticated. */
   getMe: () =>
     get<{ user: { id: string; email?: string; role?: string } }>('/auth/me'),
+
+  /** Create a new photocard (requires auth). */
+  createPhotocard: (data: PhotocardCreatePayload) =>
+    post<Photocard>('/photocards', data),
+
+  /** Get current user's submissions (requires auth). */
+  getSubmissions: () => get<Submission[]>('/submissions'),
 }

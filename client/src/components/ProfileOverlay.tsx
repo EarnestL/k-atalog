@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useAddPhotocard } from '../contexts/AddPhotocardContext'
 import styles from './ProfileOverlay.module.css'
 
 interface ProfileOverlayProps {
@@ -10,6 +12,12 @@ interface ProfileOverlayProps {
 }
 
 export default function ProfileOverlay({ isOpen, onClose, email, onLogout }: ProfileOverlayProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { open: openAddPhotocard } = useAddPhotocard()
+
+  const isOnSubmissions = location.pathname === '/submissions'
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -23,6 +31,16 @@ export default function ProfileOverlay({ isOpen, onClose, email, onLogout }: Pro
       document.body.style.overflow = ''
     }
   }, [isOpen, onClose])
+
+  const handleMySubmissions = () => {
+    onClose()
+    navigate('/submissions')
+  }
+
+  const handleAddPhotocard = () => {
+    onClose()
+    openAddPhotocard()
+  }
 
   const handleLogout = () => {
     onLogout()
@@ -48,10 +66,25 @@ export default function ProfileOverlay({ isOpen, onClose, email, onLogout }: Pro
         <div className={styles.email}>{email}</div>
         <button
           type="button"
+          className={`${styles.addPhotocardBtn} ${isOnSubmissions ? styles.active : ''}`}
+          onClick={handleMySubmissions}
+          disabled={isOnSubmissions}
+        >
+          My submissions
+        </button>
+        <button
+          type="button"
+          className={styles.addPhotocardBtn}
+          onClick={handleAddPhotocard}
+        >
+          Add photocard
+        </button>
+        <button
+          type="button"
           className={styles.logoutBtn}
           onClick={handleLogout}
         >
-          Log out
+          LOG OUT
         </button>
       </div>
     </div>,

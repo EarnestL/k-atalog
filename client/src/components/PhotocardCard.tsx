@@ -17,6 +17,7 @@ export default function PhotocardCard({ photocard, showMember = false }: Photoca
     fansign: 'Fansign',
     special: 'Special'
   }
+  const isOther = photocard.album === '_other'
 
   return (
     <>
@@ -24,7 +25,7 @@ export default function PhotocardCard({ photocard, showMember = false }: Photoca
         <div className={styles.imageWrapper}>
           <img 
             src={photocard.imageUrl} 
-            alt={`${photocard.memberName} ${photocard.album}`}
+            alt={`${photocard.memberName} ${isOther ? photocard.version : photocard.album}`}
             className={styles.image}
             loading="lazy"
           />
@@ -40,7 +41,7 @@ export default function PhotocardCard({ photocard, showMember = false }: Photoca
               {photocard.memberName}
             </span>
           )}
-          <p className={styles.album}>{photocard.album}</p>
+          {!isOther && <p className={styles.album}>{photocard.album}</p>}
           <p className={styles.description}>{photocard.version}</p>
         </div>
       </div>

@@ -19,7 +19,8 @@ export interface MemberData {
   name: string
   koreanName: string
   imageUrl: string
-  photocardCount: number
+  /** @deprecated Computed from photocard objects; no longer from API. */
+  photocardCount?: number
 }
 
 /** Member in API responses (e.g. in group.members). No groupId/groupName; use URL or parent group for context. */

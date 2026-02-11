@@ -52,7 +52,7 @@ export default function SearchBar({ variant = 'header', initialValue = '', autoF
         ref={inputRef}
         type="text"
         className={styles.input}
-        placeholder="Search groups, members, or albums..."
+        placeholder="Aespa..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => setIsFocused(true)}

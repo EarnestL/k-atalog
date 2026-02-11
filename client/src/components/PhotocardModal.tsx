@@ -16,6 +16,7 @@ export default function PhotocardModal({ photocard, onClose }: PhotocardModalPro
   const wasDragging = useRef(false)
   
   const hasBackImage = !!photocard.backImageUrl
+  const isOther = photocard.album === '_other'
 
   // Handle mouse/touch drag for 3D rotation
   const handleStart = (clientX: number, clientY: number) => {
@@ -155,7 +156,7 @@ export default function PhotocardModal({ photocard, onClose }: PhotocardModalPro
           <div className={styles.cardFace}>
             <img 
               src={photocard.imageUrl} 
-              alt={`${photocard.memberName} - ${photocard.album}`}
+              alt={`${photocard.memberName} - ${isOther ? photocard.version : photocard.album}`}
               className={styles.cardImage}
               draggable={false}
             />
@@ -187,7 +188,7 @@ export default function PhotocardModal({ photocard, onClose }: PhotocardModalPro
       {/* Card Info - clicking closes modal */}
       <div className={styles.info}>
         <h2 className={styles.memberName}>{photocard.memberName}</h2>
-        <p className={styles.albumName}>{photocard.album}</p>
+        {!isOther && <p className={styles.albumName}>{photocard.album}</p>}
         <p className={styles.version}>{photocard.version} · {photocard.year}</p>
       </div>
 

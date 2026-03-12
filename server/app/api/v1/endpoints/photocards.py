@@ -10,11 +10,11 @@ from app.schemas.photocard import (
     PhotocardCreateSchema,
     PhotocardSchema,
 )
+from app.schemas.submission import SubmissionSchema
 from app.services.data_loader import (
     get_photocards_async,
     get_photocards_by_group_async,
     get_photocards_by_group_paginated_async,
-    insert_photocard_async,
     insert_submission_async,
 )
 
@@ -43,34 +43,19 @@ async def list_photocards_by_group(
     )
 
 
-@router.post("", response_model=PhotocardSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SubmissionSchema, status_code=status.HTTP_201_CREATED)
 async def create_photocard(
     payload: PhotocardCreateSchema,
     user: dict = Depends(get_current_user),
-) -> PhotocardSchema:
-    """Create a new photocard. Requires authentication and MongoDB."""
+) -> SubmissionSchema:
+    """Create a new submission (pending). Requires authentication and MongoDB."""
     if not is_connected():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Photocard creation requires MongoDB (MONGODB_URI not configured)",
         )
-    pc = await insert_photocard_async(
-        member_name=payload.member_name,
-        group_name=payload.group_name,
-        album=payload.album,
-        version=payload.version,
-        year=payload.year,
-        type_=payload.type,
-        image_url=payload.image_url,
-        back_image_url=payload.back_image_url,
-    )
-    if pc is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Failed to create photocard",
-        )
     user_email = user.get("email") or ""
-    await insert_submission_async(
+    submission = await insert_submission_async(
         member_name=payload.member_name,
         group_name=payload.group_name,
         album=payload.album,
@@ -80,7 +65,12 @@ async def create_photocard(
         image_url=payload.image_url,
         back_image_url=payload.back_image_url,
         user_email=user_email,
-        photocard_id=pc.id,
-        status="accepted",
+        photocard_id=None,
+        status="pending",
     )
-    return pc
+    if submission is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to create submission",
+        )
+    return submission
